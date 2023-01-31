@@ -1,5 +1,6 @@
 import pandas as pd
-import videoProcessFunctions as vpf
+from videoProcessCsv import VideoToCsv
+
 
 if __name__ == '__main__':
     videoPath = r"ExractCsvFromYUVvideo\video\BasketballPass_416x240_50.yuv"
@@ -8,8 +9,6 @@ if __name__ == '__main__':
     yuvForm = "yuv420p"
     csvPath = r"ExractCsvFromYUVvideo\csvFile\basketballCU.csv"
 
-    mssk_result = pd.DataFrame
-    mssk_result = vpf.videoProcess(videoPath, videoW, videoH, yuvForm)
-
-    mssk_result.to_csv(csvPath)
-    print(mssk_result)
+    vtc = VideoToCsv(videoPath, videoW, videoH, yuvForm, csvPath)
+    vtc.videoProcess()
+    vtc.writeToCsvFile()

@@ -10,7 +10,7 @@ class VideoToCsv:
     write to csv
     '''
 
-    def __init__(self, videoPath, videoW, videoH, yuvForm):
+    def __init__(self, videoPath, videoW, videoH, yuvForm, csvPath):
         '''
         get inisal information of video path, frames, bigest CU...
         '''
@@ -20,6 +20,7 @@ class VideoToCsv:
         self.yuvForm = yuvForm
         self.subimg_h = 128
         self.subimg_w = 128
+        self.csvPath = csvPath
 
         self.yuvFrames = yuvio.mimread(
             self.videoPath, self.videoW, self.videoH, self.yuvForm)
@@ -39,7 +40,7 @@ class VideoToCsv:
         y = image.y
         return y
 
-    def imageSplit(image, img_h, img_w, subimg_h, subimg_w):
+    def imageSplit(self, image, img_h, img_w, subimg_h, subimg_w):
         '''
         Split a frame(image) to a 4D array
         '''
@@ -144,7 +145,7 @@ class VideoToCsv:
         ##################### Divide frame and produce 2d matrix ############################
         array = self.imageSplit(y)
         ra0 = self.reshapeSplit(array)
-        length = yuv_frames.__len__()
+        length = yuv_frames.__len__() - 1
         for i in range(length):
             yuv_frame = yuv_frames.pop()
             y = yuv_frame.y
@@ -174,7 +175,7 @@ class VideoToCsv:
         array = self.imageSplit(grad)
         ra0 = self.reshapeSplit(array)
 
-        length = yuv_frames.__len__()
+        length = yuv_frames.__len__() - 1
         for i in range(length):
             yuv_frame = yuv_frames.pop()
             y = yuv_frame.y
@@ -204,7 +205,7 @@ class VideoToCsv:
         array = self.imageSplit(grad)
         ra0 = self.reshapeSplit(array)
 
-        length = yuv_frames.__len__()
+        length = yuv_frames.__len__() - 1
         for i in range(length):
             yuv_frame = yuv_frames.pop()
             y = yuv_frame.y
@@ -247,7 +248,18 @@ class VideoToCsv:
         # merge together and return
         mssk_result = self.merge_MSSK_Array_together()
         self.video_csv = mssk_result
+        print(f"The result Csv table of this video is:  \n")
+        print(self.video_csv)
         return mssk_result
+
+    def writeToCsvFile(self, mssk):
+        # mssk = pd.DataFrame()
+        mssk.to_csv(self.csvPath)
+
+    def writeToCsvFile(self):
+        # mssk = pd.DataFrame()
+        mssk = self.video_csv
+        mssk.to_csv(self.csvPath)
 
 
 if __name__ == '__main__':
@@ -257,7 +269,7 @@ if __name__ == '__main__':
     yuvForm = "yuv420p"
     csvPath = r"ExractCsvFromYUVvideo\csvFile\basketballCU.csv"
 
-    vtc = VideoToCsv(videoPath, videoW, videoH, yuvForm)
+    vtc = VideoToCsv(videoPath, videoW, videoH, yuvForm, csvPath)
     # print(vtc.yuvFrames)
     vtc.videoProcess()
-    print(vtc.video_csv)
+    # print(vtc.video_csv)
