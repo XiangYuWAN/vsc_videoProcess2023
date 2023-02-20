@@ -30,6 +30,7 @@ class VideoToCsv:
         self.video_LapArray = "No value now"
 
         self.video_csv = "No value now"
+        print("init sucess!")
 
     def ReadFirstFrameY_of_Video(self):
         '''
@@ -112,9 +113,13 @@ class VideoToCsv:
         Transfer a 2D array to a csv with Mean Std Skew Kurt
         '''
         df1 = pd.DataFrame(data)
+        print("Calculating arrays Mean...")
         mean = df1.mean(axis=1)
+        print("Calculating arrays std...")
         std = df1.std(axis=1)
+        print("Calculating arrays skew...")
         skew = df1.skew(axis=1)
+        print("Calculating arrays kurt...")
         kurt = df1.kurt(axis=1)
 
         # print("mean:\n", mean)
@@ -223,8 +228,11 @@ class VideoToCsv:
         Combine normal array, sobel array, lap array together  
         '''
         # calculate each CU's mean, std, skew and kurt
+        print("[##### Start to calculate MSSK...... #############]")
         n_result = self.Array2DTo_MSSK(self.video_NormalArray)
+        print("[##### Start to calculate Sobel MSSK...... #######]")
         s_result = self.Array2DTo_MSSK(self.video_SobelArray)
+        print("[##### Start to calculate Laplacian MSSK...... ###]")
         l_result = self.Array2DTo_MSSK(self.video_LapArray)
 
         # change column name
@@ -241,12 +249,22 @@ class VideoToCsv:
         Start the whole video process to get dataframe result
         '''
         # get 2D arrays of video with normal, after sobel, after lap, each row of arrays stand for a CU
+        print("Start VideoArray creating...")
         self.getVideoArray()
+        print("Finish VideoArray creating!")
+
+        print("Start Sobel VideoArray creating...")
         self.getSobel_VideoArray()
+        print("Finish Sobel VideoArray creating!")
+
+        print("start Laplavian VideoArray creating...")
         self.getLaplacian_VideoArray()
+        print("Finish Laplacian VideoArray creating!")
 
         # merge together and return
+        print("Start to calculate and merge...")
         mssk_result = self.merge_MSSK_Array_together()
+        print("Finish calculating and merging!")
         self.video_csv = mssk_result
         print(f"The result Csv table of this video is:  \n")
         print(self.video_csv)
