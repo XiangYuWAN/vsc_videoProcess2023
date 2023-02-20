@@ -279,6 +279,74 @@ class VideoToCsv:
         mssk = self.video_csv
         mssk.to_csv(self.csvPath)
 
+    def calculate_MSSK(self, data):
+        '''
+        Calculate MSSK in loop
+        '''
+        print("Start to calculate MSSK... longtime to run, please wait")
+        mssk = np.zeros((data.shape[0], 4))
+        for i in range(data.shape[0]):
+            row = data[i]
+            n = len(row)
+            mean = sum(row) / n
+            variance = sum((x - mean) ** 2 for x in row) / n
+            std = variance ** 0.5
+            # Add a small number to the denominator to avoid division by zero
+            skewness = np.sum((row - mean) ** 3) / ((n * std ** 3) + 1e-9)
+            kurtosis = np.sum((row - mean) ** 4) / ((n * std ** 4) + 1e-9)
+            mssk[i, 0] = mean
+            mssk[i, 1] = std
+            mssk[i, 2] = skewness
+            mssk[i, 3] = kurtosis
+            if ((i+1) % 10000 == 0):
+                print("...")
+        # print(mssk)
+        print("Success with MSSK!")
+        return mssk
+
+    def videoProcess(self, num):
+        '''
+        Start the whole video process to get dataframe result
+        '''
+        if (num == 1):
+            print("calculate MSSK in loop ::")
+        # get 2D arrays of video with normal, after sobel, after lap, each row of arrays stand for a CU
+        print("Start VideoArray creating...")
+        self.getVideoArray()
+        print("Finish VideoArray creating!")
+
+        print("Start Sobel VideoArray creating...")
+        self.getSobel_VideoArray()
+        print("Finish Sobel VideoArray creating!")
+
+        print("start Laplavian VideoArray creating...")
+        self.getLaplacian_VideoArray()
+        print("Finish Laplacian VideoArray creating!")
+
+        # merge together and return
+        print("Start to calculate and merge...")
+        print("Start to calculate Normal Array...")
+        nomal_MSSK = self.calculate_MSSK(self.video_NormalArray)
+        print("Start to calculate Sobel Array...")
+        sobel_MSSK = self.calculate_MSSK(self.video_SobelArray)
+        print("Start to calculate Lap Array...")
+        lap_MSSK = self.calculate_MSSK(self.video_LapArray)
+        print("start to merge...")
+        df1 = pd.DataFrame(nomal_MSSK)
+        df2 = pd.DataFrame(sobel_MSSK)
+        df3 = pd.DataFrame(lap_MSSK)
+        df1.columns = ['Mean', 'std', 'Skew', 'Kurt']
+        df2.columns = ['Sobel_Mean',
+                       'Sobel_std', 'Sobel_Skew', 'Sobel_Kurt']
+        df3.columns = ['Lap_Mean', 'Lap_std', 'Lap_Skew', 'Lap_Kurt']
+        mssk_result = pd.concat([df1, df2, df3], axis=1)
+        # mssk_result = self.merge_MSSK_Array_together()
+        print("Finish calculating and merging!")
+        self.video_csv = mssk_result
+        print(f"The result Csv table of this video is:  \n")
+        print(self.video_csv)
+        return mssk_result
+
 
 if __name__ == '__main__':
     videoPath = r"ExractCsvFromYUVvideo\video\BasketballPass_416x240_50.yuv"
