@@ -304,12 +304,11 @@ class VideoToCsv:
         print("Success with MSSK!")
         return mssk
 
-    def videoProcess(self, num):
+    def videoProcessloop(self):
         '''
         Start the whole video process to get dataframe result
         '''
-        if (num == 1):
-            print("calculate MSSK in loop ::")
+
         # get 2D arrays of video with normal, after sobel, after lap, each row of arrays stand for a CU
         print("Start VideoArray creating...")
         self.getVideoArray()
