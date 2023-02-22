@@ -1,3 +1,4 @@
+from enum import Enum
 import numpy as np
 import cv2 as cv
 import pandas as pd
@@ -14,6 +15,19 @@ class VideoToCsv:
         '''
         get inisal information of video path, frames, bigest CU...
         '''
+        self.MSSK_MEAN = 0
+        self.MSSK_STD = 1
+        self.MSSK_SKEW = 2
+        self.MSSK_KURT = 3
+        self.MSSK_SOBEL_MEAN = 4
+        self.MSSK_SOBEL_STD = 5
+        self.MSSK_SOBEL_SKEW = 6
+        self.MSSK_SOBEL_KURT = 7
+        self.MSSK_LAP_MEAN = 8
+        self.MSSK_LAP_STD = 9
+        self.MSSK_LAP_SKEW = 10
+        self.MSSK_LAP_KURT = 11
+
         self.videoPath = videoPath
         self.videoW = videoW
         self.videoH = videoH
@@ -24,14 +38,15 @@ class VideoToCsv:
         self.yuvFrames = yuvio.mimread(
             self.videoPath, self.videoW, self.videoH, self.yuvForm)
 
-        CUnum = (int(videoH / 128))*(int(videoW / 128)) * \
-            (self.yuvFrames.__len__())
-        self.mssk = np.zeros((CUnum, 12))
-        self.video_NormalArray = "No value now"
-        self.video_SobelArray = "No value now"
-        self.video_LapArray = "No value now"
+        self.FrameNum = self.yuvFrames.__len__() - 1
+        # self.FrameNum = 100
+        self.CTUNuminFrame = (int(videoH / 128))*(int(videoW / 128))
+        CTUnum = (int(videoH / 128))*(int(videoW / 128)) * \
+            (self.FrameNum)
+        self.mssk = np.zeros((CTUnum, 12))
 
         self.video_csv = "No value now"
+
         print("init sucess!")
 
     def imageSplit(self, image):
@@ -88,55 +103,112 @@ class VideoToCsv:
         abs_dst = cv.convertScaleAbs(dst)
         return abs_dst
 
+    def calculate_MSSK(self, FrameCTUs):
+        '''
+        Calculate MSSK in loop
+        '''
+        FrameMssk = np.zeros((FrameCTUs.shape[0], 4))
+        for CTUid in range(FrameCTUs.shape[0]):
+            row = FrameCTUs[CTUid]
+            series = pd.Series(row)
+            # n = len(row)
+
+            # mean = sum(row) / n
+            # variance = sum((x - mean) ** 2 for x in row) / n
+            # std = variance ** 0.5
+            # # Add a small number to the denominator to avoid division by zero
+            # skewness = np.sum((row - mean) ** 3) / ((n * std ** 3) + 1e-9)
+            # kurtosis = np.sum((row - mean) ** 4) / ((n * std ** 4) + 1e-9)
+
+            mean = np.mean(row)
+            std = np.std(row)
+            skewness = series.skew()
+            kurtosis = series.kurt()
+            # skewness = np.sum((row - mean) ** 3) / ((n * std ** 3) + 1e-9)
+            # kurtosis = np.sum((row - mean) ** 4) / ((n * std ** 4) + 1e-9)
+
+            FrameMssk[CTUid, 0] = mean
+            FrameMssk[CTUid, 1] = std
+            FrameMssk[CTUid, 2] = skewness
+            FrameMssk[CTUid, 3] = kurtosis
+        return FrameMssk
+
     # need to change::
     def videoProcess(self):
         '''
         Extract video frames to array 
         And put this as attribute in this class 
         '''
-        yuv_frames = self.yuvFrames.copy()
-        length = yuv_frames.__len__() - 1
+        FrameNum = self.FrameNum
 
-        yuv_frame = yuv_frames.pop()
-        y = yuv_frame.y
-        array = self.imageSplit(y)
-        ra0 = self.reshapeSplit(array)
-
-        if ():
-            yuv_frames = self.yuvFrames.copy()
-            # img_h = self.videoH
-            # img_w = self.videoW
-            # subimg_h, subimg_w = self.subimg_h, self.subimg_w
-
-            # 初始化 initialization
-            yuv_frame = yuv_frames.pop()
+        for frame in range(FrameNum):
+            print(f"Processing frame::{frame}")
+            yuv_frame = self.yuvFrames.pop()
             y = yuv_frame.y
-            # grad = sobelFilter.SobelFilter(y)
+            sobely = self.Sobel_Filter(y)
+            lapy = self.Laplacian_Filter(y)
             ##################### Divide frame and produce 2d matrix ############################
-            array = self.imageSplit(y)
-            ra0 = self.reshapeSplit(array)
-            length = yuv_frames.__len__() - 1
-            for i in range(length):
-                yuv_frame = yuv_frames.pop()
-                y = yuv_frame.y
-                # grad = sobelFilter.SobelFilter(y)
-                ##################### Divide frame and produce 2d matrix ############################
-                array = self.imageSplit(y)
-                ra = self.reshapeSplit(array)
-                ra0 = np.row_stack((ra0, ra))
 
-            self.video_NormalArray = ra0
-            return ra0
+            NomalFrameCTUs = self.reshapeSplit(self.imageSplit(y))
+            SobelFrameCTUs = self.reshapeSplit(self.imageSplit(sobely))
+            LapFrameCTUs = self.reshapeSplit(self.imageSplit(lapy))
+
+            NomalFrameMssk = self.calculate_MSSK(NomalFrameCTUs)
+            SobelFrameMssk = self.calculate_MSSK(SobelFrameCTUs)
+            LapFrameMssk = self.calculate_MSSK(LapFrameCTUs)
+
+            ########## ######################
+
+            for ctu in range(self.CTUNuminFrame):
+                mssk_ID = frame*self.CTUNuminFrame + ctu
+                ##################### ###################
+                # print(frame, ctu, mssk_ID)
+                self.mssk[mssk_ID, self.MSSK_MEAN] = NomalFrameMssk[ctu, 0]
+                self.mssk[mssk_ID, self.MSSK_STD] = NomalFrameMssk[ctu, 1]
+                self.mssk[mssk_ID, self.MSSK_SKEW] = NomalFrameMssk[ctu, 2]
+                self.mssk[mssk_ID, self.MSSK_KURT] = NomalFrameMssk[ctu, 3]
+
+                self.mssk[mssk_ID,
+                          self.MSSK_SOBEL_MEAN] = SobelFrameMssk[ctu, 0]
+                self.mssk[mssk_ID,
+                          self.MSSK_SOBEL_STD] = SobelFrameMssk[ctu, 1]
+                self.mssk[mssk_ID,
+                          self.MSSK_SOBEL_SKEW] = SobelFrameMssk[ctu, 2]
+                self.mssk[mssk_ID,
+                          self.MSSK_SOBEL_KURT] = SobelFrameMssk[ctu, 3]
+
+                self.mssk[mssk_ID,
+                          self.MSSK_LAP_MEAN] = LapFrameMssk[ctu, 0]
+                self.mssk[mssk_ID,
+                          self.MSSK_LAP_STD] = LapFrameMssk[ctu, 1]
+                self.mssk[mssk_ID,
+                          self.MSSK_LAP_SKEW] = LapFrameMssk[ctu, 2]
+                self.mssk[mssk_ID,
+                          self.MSSK_LAP_KURT] = LapFrameMssk[ctu, 3]
+
+        df = pd.DataFrame(self.mssk)
+        return df
+
+    def writeToCsvFile(self, mssk):
+        # mssk = pd.DataFrame()
+        mssk.to_csv(self.csvPath)
 
 
 if __name__ == '__main__':
     videoPath = r"video/BasketballDrive_1920x1080_50.yuv"
     videoW = 1920
     videoH = 1080
+
+    # videoPath = r"video/BasketballPass_416x240_50.yuv"
+    # videoW = 416
+    # videoH = 240
+
     yuvForm = "yuv420p"
-    csvPath = r"csvFile/basketballCU.csv"
+    csvPath = r"csvFile/test.csv"
 
     vtc = VideoToCsv(videoPath, videoW, videoH, yuvForm, csvPath)
-
+    data = vtc.videoProcess()
+    print(data)
+    vtc.writeToCsvFile(data)
     # print(vtc.mssk.shape)
     # print(vtc.video_csv)
