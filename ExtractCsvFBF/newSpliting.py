@@ -2,6 +2,7 @@ import numpy as np
 import cv2 as cv
 import pandas as pd
 import yuvio
+import csv
 # from scipy.stats import skew, kurtosis
 # import time
 
@@ -27,9 +28,9 @@ class VideoToCsv:
         self.yuvFrames = yuvio.mimread(
             self.videoPath, self.videoW, self.videoH, self.yuvForm)
 
-        # self.FrameNum = self.yuvFrames.__len__() - 1
-        self.FrameNum = 100
-        self.resultMSSK = np.empty((0, 12))
+        self.FrameNum = self.yuvFrames.__len__() - 1
+        # self.FrameNum = 2
+        # self.resultMSSK = np.empty((0, 12))
         self.video_csv = "No value now"
 
         print("init sucess!")
@@ -93,7 +94,11 @@ class VideoToCsv:
                 ctuInfo = [n_mean, n_std, n_skew, n_kurt, s_mean, s_std,
                            s_skew, s_kurt, l_mean, l_std, l_skew, l_kurt]
 
-                self.resultMSSK = np.vstack([self.resultMSSK, ctuInfo])
+                # self.resultMSSK = np.vstack([self.resultMSSK, ctuInfo])
+
+                # with open(self.csvPath, 'a', newline='') as file:
+                #     writer = csv.writer(file)
+                #     writer.writerow(ctuInfo)
 
     def calculateMSSK(self, CTU):
         series = pd.Series(CTU)
@@ -108,6 +113,11 @@ class VideoToCsv:
         Extract video frames to array 
         And put this as attribute in this class 
         '''
+        # with open(self.csvPath, mode='w', newline='') as file:
+        #     writer = csv.writer(file)
+        #     writer.writerow(['Mean', 'std', 'skew', 'kurt', 'SobelMean', 'Sobel_std',
+        #                     'SobelSkew', 'SobelKurt', 'LapMean', 'Lap_std', 'LapSkew', 'LapKurt'])
+
         FrameNum = self.FrameNum
         for frame in range(FrameNum):
             # start = time.time()
@@ -115,8 +125,7 @@ class VideoToCsv:
             print(f"Processing frame::{frame}")
             yuv_frame = self.yuvFrames.pop().y
             self.split_re_MSSK(yuv_frame)
-
-        self.resultMSSK = pd.DataFrame(self.resultMSSK)
+        # self.resultMSSK = pd.DataFrame(self.resultMSSK)
 
 
 if __name__ == '__main__':
@@ -133,5 +142,5 @@ if __name__ == '__main__':
 
     vtc = VideoToCsv(videoPath, videoW, videoH, yuvForm, csvPath)
     vtc.videoProcess()
-    print(vtc.resultMSSK)
+    # print(vtc.resultMSSK)
     # print(data)
